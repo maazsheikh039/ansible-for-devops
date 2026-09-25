@@ -1,0 +1,2 @@
+custom_host_key: "unique-web-01-token"
+http_port: 8080
