@@ -1,0 +1,32 @@
+---
+- name: Production Web Server Automation & Verification
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update apt cache and install Nginx
+      apt:
+        name: nginx
+        state: present
+        update_cache: yes
+
+    - name: Deploy dynamic index page from template
+      template:
+        src: templates/index.html.j2
+        dest: /var/www/html/index.html
+        mode: '0644'
+
+    - name: Ensure Nginx service is running and enabled
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Verify Web Server HTTP Response
+      uri:
+        url: http://localhost
+        status_code: 200
+      register: result
+
+    - name: Print Response Status
+      debug:
+        msg: "Webserver verification success with HTTP {{ result.status }}"
