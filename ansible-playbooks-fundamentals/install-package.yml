@@ -1,0 +1,22 @@
+---
+- name: Install htop package
+  hosts: local
+  become: yes
+  tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install htop package
+      apt:
+        name: htop
+        state: present
+
+    - name: Verify htop installation
+      command: which htop
+      register: htop_path
+
+    - name: Display htop location
+      debug:
+        msg: "htop is installed at: {{ htop_path.stdout }}"

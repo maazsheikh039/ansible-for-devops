@@ -1,0 +1,45 @@
+---
+- name: Playbook demonstrating variables
+  hosts: local
+  become: yes
+  vars:
+    app_name: "my-web-app"
+    app_port: 8080
+    app_user: "webuser"
+
+  tasks:
+    - name: Create application user
+      user:
+        name: "{{ app_user }}"
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Create application directory
+      file:
+        path: "/opt/{{ app_name }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Create configuration file
+      copy:
+        content: |
+          # Configuration for {{ app_name }}
+          APP_NAME={{ app_name }}
+          APP_PORT={{ app_port }}
+          APP_USER={{ app_user }}
+          CREATED_BY=Ansible
+          CREATED_DATE={{ ansible_date_time.iso8601 }}
+        dest: "/opt/{{ app_name }}/config.txt"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+
+    - name: Display configuration
+      debug:
+        msg:
+          - "Application: {{ app_name }}"
+          - "Port: {{ app_port }}"
+          - "User: {{ app_user }}"
+          - "Directory: /opt/{{ app_name }}"

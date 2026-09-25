@@ -1,0 +1,39 @@
+---
+- name: Playbook with error handling
+  hosts: local
+  become: yes
+
+  tasks:
+    - name: Try to install a non-existent package
+      apt:
+        name: non-existent-package-12345
+        state: present
+      ignore_errors: yes
+      register: install_result
+
+    - name: Display error message if installation failed
+      debug:
+        msg: "Package installation failed: {{ install_result.msg }}"
+      when: install_result.failed
+
+    - name: Install a real package (nginx)
+      apt:
+        name: nginx
+        state: present
+      register: nginx_install
+
+    - name: Start nginx service
+      systemd:
+        name: nginx
+        state: started
+        enabled: yes
+      when: nginx_install.changed or not nginx_install.failed
+
+    - name: Check nginx status
+      command: systemctl is-active nginx
+      register: nginx_status
+      changed_when: false
+
+    - name: Display nginx status
+      debug:
+        msg: "Nginx service status: {{ nginx_status.stdout }}"

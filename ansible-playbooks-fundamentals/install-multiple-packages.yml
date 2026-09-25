@@ -1,0 +1,42 @@
+---
+- name: Install multiple useful packages
+  hosts: local
+  become: yes
+  vars:
+    packages_to_install:
+      - curl
+      - wget
+      - git
+      - vim
+      - tree
+      - unzip
+
+  tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install multiple packages
+      apt:
+        name: "{{ packages_to_install }}"
+        state: present
+
+    - name: Create a test directory
+      file:
+        path: /tmp/ansible-test
+        state: directory
+        mode: '0755'
+
+    - name: Create a test file with content
+      copy:
+        content: |
+          This file was created by Ansible playbook
+          Date: {{ ansible_date_time.date }}
+          Time: {{ ansible_date_time.time }}
+        dest: /tmp/ansible-test/playbook-info.txt
+        mode: '0644'
+
+    - name: Display installed packages
+      debug:
+        msg: "Successfully installed: {{ packages_to_install | join(', ') }}"
