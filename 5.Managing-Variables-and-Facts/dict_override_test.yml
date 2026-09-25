@@ -1,0 +1,20 @@
+---
+- name: Partial Dictionary Merge Test
+  hosts: local
+  gather_facts: no
+  vars:
+    deployment_config:
+      environment: "production-base"
+      version: "v2.4.0"
+      replicas: 2
+  tasks:
+    - name: Display Initial Configuration State
+      debug:
+        var: deployment_config
+
+    - name: Display Merged Deployment Configuration
+      debug:
+        msg:
+          - "Environment: {{ deployment_config.environment }}"
+          - "Version: {{ deployment_config.version }}"
+          - "Replicas: {{ deployment_config.replicas }}"

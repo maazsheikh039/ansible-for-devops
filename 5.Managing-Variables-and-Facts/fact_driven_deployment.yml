@@ -1,0 +1,62 @@
+---
+- name: Fact-Driven Adaptive Deployment Engine
+  hosts: local
+  gather_facts: no
+  tasks:
+    - name: Selectively Gather System and Custom Local Facts
+      setup:
+        filter:
+          - 'distribution*'
+          - 'memtotal_mb'
+          - 'processor_cores'
+          - 'mounts'
+          - 'local'
+
+    - name: Print Consolidated System & Custom Facts
+      debug:
+        msg:
+          - "OS Distribution: {{ ansible_distribution }}"
+          - "Total Memory (MB): {{ ansible_memtotal_mb }}"
+          - "CPU Cores: {{ ansible_processor_cores }}"
+          - "App Version: {{ ansible_local.app_meta.app_version }}"
+          - "Deployment Env: {{ ansible_local.app_meta.deploy_env }}"
+          - "Mounts Count: {{ ansible_mounts | length }}"
+
+    # Memory Check Block Logic
+    - name: Memory Allocation Assessment Block
+      block:
+        - name: Low Memory System Warning
+          debug:
+            msg: "WARNING: System has low memory ({{ ansible_memtotal_mb }} MB < 2048 MB)."
+          when: ansible_memtotal_mb < 2048
+
+        - name: Sufficient Memory Confirmed
+          debug:
+            msg: "SUCCESS: System memory capacity is sufficient ({{ ansible_memtotal_mb }} MB >= 2048 MB)."
+          when: ansible_memtotal_mb >= 2048
+
+    # OS-Family Check Block Logic
+    - name: OS Family Provisioning Block
+      block:
+        - name: Debian-Family Task Block Execution
+          debug:
+            msg: "Debian-based system detected ({{ ansible_distribution }}). Executing apt configurations."
+          when: ansible_os_family == "Debian"
+
+        - name: RedHat-Family Task Block Execution
+          debug:
+            msg: "RedHat-based system detected ({{ ansible_distribution }}). Executing yum/dnf configurations."
+          when: ansible_os_family == "RedHat"
+
+    # Disk Space Check Loop Logic
+    - name: Storage Mount Space Capacity Verification
+      debug:
+        msg: >-
+          {% set free_pct = ((item.size_available / item.size_total) * 100) | round(2) %}
+          {% if free_pct < 20 %}
+          WARNING: Mount {{ item.mount }} has low free space ({{ free_pct }}% remaining)!
+          {% else %}
+          CLEAR: Mount {{ item.mount }} has healthy free space ({{ free_pct }}% remaining).
+          {% endif %}
+      loop: "{{ ansible_mounts }}"
+      when: item.size_total > 0

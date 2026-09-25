@@ -1,0 +1,10 @@
+---
+- name: Demonstrate Ansible Variable Precedence Hierarchy
+  hosts: local
+  gather_facts: no
+  vars:
+    log_level: "play-scope"
+  tasks:
+    - name: Display Resolved Log Level Variable
+      debug:
+        msg: "Resolved log_level value is: {{ log_level }}"
