@@ -1,0 +1,69 @@
+---
+- name: Multi-Service Container Deployment Engine
+  hosts: local
+  vars:
+    container_stack:
+      - name: lab-nginx
+        image: nginx:alpine
+        ports: ["8080:80"]
+        host_vol_dir: /opt/lab/nginx/html
+        cont_vol_dir: /usr/share/nginx/html
+        env_vars: {}
+      - name: lab-redis
+        image: redis:alpine
+        ports: ["6379:6379"]
+        host_vol_dir: /opt/lab/redis/data
+        cont_vol_dir: /data
+        env_vars: {}
+      - name: lab-mysql
+        image: mysql:8.0
+        ports: ["3306:3306"]
+        host_vol_dir: /opt/lab/mysql/data
+        cont_vol_dir: /var/lib/mysql
+        env_vars:
+          MYSQL_ROOT_PASSWORD: "SuperSecretPassword123"
+          MYSQL_DATABASE: "labdb"
+
+  tasks:
+    - name: Ensure host volume storage directories exist
+      file:
+        path: "{{ item.host_vol_dir }}"
+        state: directory
+        mode: '0777'
+      loop: "{{ container_stack }}"
+      become: yes
+
+    - name: Create index HTML landing file for Nginx
+      copy:
+        content: "<h1>Ansible Module Lab Success</h1>"
+        dest: /opt/lab/nginx/html/index.html
+        mode: '0644'
+      become: yes
+
+    - name: Deploy Docker Containers via Single Unified Loop
+      community.docker.docker_container:
+        name: "{{ item.name }}"
+        image: "{{ item.image }}"
+        published_ports: "{{ item.ports }}"
+        volumes:
+          - "{{ item.host_vol_dir }}:{{ item.cont_vol_dir }}"
+        env: "{{ item.env_vars }}"
+        restart_policy: unless-stopped
+        state: started
+      loop: "{{ container_stack }}"
+
+    - name: Query dynamic state for all deployed containers
+      community.docker.docker_container_info:
+        name: "{{ item.name }}"
+      loop: "{{ container_stack }}"
+      register: container_info_results
+
+    - name: Assert all containers are active and in running state
+      assert:
+        that:
+          - item.container.State.Status == "running"
+        fail_msg: "CRITICAL FAILURE: Container {{ item.item.name }} is NOT running! Current status: {{ item.container.State.Status | default('absent') }}"
+        success_msg: "CONFIRMED: Container {{ item.item.name }} is operational and running."
+      loop: "{{ container_info_results.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"

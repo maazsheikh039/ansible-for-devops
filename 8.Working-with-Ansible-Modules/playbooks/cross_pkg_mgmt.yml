@@ -1,0 +1,41 @@
+---
+- name: Cross-Distribution Idempotent Package Manager
+  hosts: local
+  become: yes
+  vars:
+    common_packages:
+      - curl
+      - git
+      - htop
+    debian_packages:
+      - net-tools
+      - ufw
+    redhat_packages:
+      - bind-utils
+      - firewalld
+  tasks:
+    - name: Debian/Ubuntu Package Management Block
+      block:
+        - name: Install Debian Common & Specific Packages
+          apt:
+            name: "{{ common_packages + debian_packages }}"
+            state: present
+            update_cache: yes
+            cache_valid_time: 3600
+          register: debian_pkg_result
+      when: ansible_os_family == "Debian"
+
+    - name: RedHat/RHEL Package Management Block
+      block:
+        - name: Install RedHat Common & Specific Packages
+          yum:
+            name: "{{ common_packages + redhat_packages }}"
+            state: present
+          register: redhat_pkg_result
+      when: ansible_os_family == "RedHat"
+
+    - name: Output Structured Package Management Execution Summary
+      debug:
+        msg:
+          - "Debian Block Executed & Changed: {{ debian_pkg_result.changed | default(false) }}"
+          - "RedHat Block Executed & Changed: {{ redhat_pkg_result.changed | default(false) }}"

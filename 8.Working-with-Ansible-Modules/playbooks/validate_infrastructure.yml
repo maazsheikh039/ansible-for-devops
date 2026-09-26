@@ -1,0 +1,99 @@
+---
+- name: Infrastructure Health Validation and Audit Report
+  hosts: local
+  vars:
+    audit_results: []
+  tasks:
+    # Check 1: Package presence
+    - name: "Check 1: Verify Git Package Installation"
+      command: git --version
+      register: check_git
+      ignore_errors: yes
+
+    - name: Record Check 1 Result
+      set_fact:
+        audit_results: "{{ audit_results + [{'name': 'Git Binary Check', 'passed': check_git.rc == 0, 'detail': check_git.stdout | default('Git Missing')}] }}"
+
+    # Check 2: Container Running State
+    - name: "Check 2: Verify Nginx Container Status"
+      community.docker.docker_container_info:
+        name: lab-nginx
+      register: check_nginx
+      ignore_errors: yes
+
+    - name: Record Check 2 Result
+      set_fact:
+        audit_results: "{{ audit_results + [{'name': 'Nginx Container Status', 'passed': (check_nginx.container.State.Status | default('')) == 'running', 'detail': check_nginx.container.State.Status | default('Stopped')}] }}"
+
+    # Check 3: Host Directory Existence
+    - name: "Check 3: Verify MySQL Host Volume Directory"
+      stat:
+        path: /opt/lab/mysql/data
+      register: check_dir
+      ignore_errors: yes
+
+    - name: Record Check 3 Result
+      set_fact:
+        audit_results: "{{ audit_results + [{'name': 'MySQL Directory Check', 'passed': check_dir.stat.exists, 'detail': 'Directory Path Found' if check_dir.stat.exists else 'Directory Missing'}] }}"
+
+    # Check 4: Nginx HTTP Endpoint Response
+    - name: "Check 4: Query Nginx Web Endpoint on Port 8080"
+      uri:
+        url: http://localhost:8080
+        status_code: 200
+      register: check_http
+      ignore_errors: yes
+
+    - name: Record Check 4 Result
+      set_fact:
+        audit_results: "{{ audit_results + [{'name': 'Nginx HTTP Response', 'passed': check_http.status | default(0) == 200, 'detail': 'HTTP Status Code ' ~ (check_http.status | default(0))}] }}"
+
+    # Check 5: Redis Engine PING Response
+    - name: "Check 5: Execute Redis Engine PING"
+      command: docker exec lab-redis redis-cli ping
+      register: check_redis
+      ignore_errors: yes
+
+    - name: Record Check 5 Result
+      set_fact:
+        audit_results: "{{ audit_results + [{'name': 'Redis Engine Ping', 'passed': 'PONG' in (check_redis.stdout | default('')), 'detail': check_redis.stdout | default('Failed')}] }}"
+
+    # Check 6: MySQL Database Engine Query Execution
+    - name: "Check 6: Query MySQL Database Server"
+      command: docker exec lab-mysql mysql -u root -pSuperSecretPassword123 -e "SHOW DATABASES;"
+      register: check_mysql
+      ignore_errors: yes
+
+    - name: Record Check 6 Result
+      set_fact:
+        audit_results: "{{ audit_results + [{'name': 'MySQL Query Execution', 'passed': check_mysql.rc == 0, 'detail': check_mysql.stdout | default('Query Failed')}] }}"
+
+    # Check 7: Cron Service Schedule
+    - name: "Check 7: Verify Scheduled System Tasks"
+      command: crontab -l
+      register: check_cron
+      ignore_errors: yes
+
+    - name: Record Check 7 Result
+      set_fact:
+        audit_results: "{{ audit_results + [{'name': 'Cron Scheduler Check', 'passed': check_cron.rc == 0, 'detail': 'Cron jobs present' if check_cron.rc == 0 else 'No cron jobs'}] }}"
+
+    # Export Machine-Readable JSON Report
+    - name: Write Audit Results to /tmp/lab-report.json
+      copy:
+        content: "{{ audit_results | to_nice_json }}"
+        dest: /tmp/lab-report.json
+        mode: '0644'
+
+    # Evaluate Passing Checks
+    - name: Calculate Total Successful Audits
+      set_fact:
+        passed_count: "{{ audit_results | selectattr('passed', 'equalto', true) | list | length }}"
+        total_count: "{{ audit_results | length }}"
+
+    - name: Assert Health Quality Gate Minimum (at least 5 passing)
+      assert:
+        that:
+          - (passed_count | int) >= 5
+        fail_msg: "AUDIT FAILURE: Only {{ passed_count }} of {{ total_count }} health checks passed (Minimum required: 5)."
+        success_msg: "AUDIT SUCCESS: {{ passed_count }} of {{ total_count }} health checks passed."

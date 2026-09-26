@@ -1,0 +1,27 @@
+---
+- name: Environment Destruction & Resource Teardown
+  hosts: local
+  become: yes
+  tasks:
+    - name: Force Stop and Remove Lab Containers
+      community.docker.docker_container:
+        name: "{{ item }}"
+        state: absent
+        force_kill: yes
+      loop:
+        - lab-nginx
+        - lab-redis
+        - lab-mysql
+      ignore_errors: yes
+
+    - name: Delete /opt/lab Host Storage Directory Tree
+      file:
+        path: /opt/lab
+        state: absent
+      ignore_errors: yes
+
+    - name: Remove Audit Report Artifact
+      file:
+        path: /tmp/lab-report.json
+        state: absent
+      ignore_errors: yes

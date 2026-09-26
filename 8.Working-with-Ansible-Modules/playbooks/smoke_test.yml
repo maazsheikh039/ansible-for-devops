@@ -1,0 +1,11 @@
+---
+- name: Control Plane Smoke Test & Fact Discovery
+  hosts: local
+  gather_facts: yes
+  tasks:
+    - name: Display OS Family, Memory, and CPU Cores
+      debug:
+        msg:
+          - "OS Family: {{ ansible_os_family }}"
+          - "Total RAM (MB): {{ ansible_memtotal_mb }}"
+          - "CPU Cores Count: {{ ansible_processor_vcpus }}"
