@@ -1,0 +1,67 @@
+---
+- name: System Baseline Validation Suite
+  hosts: local
+  become: yes
+  tasks:
+    - name: ASSERT 1 - Verify appuser existence and UID/GID parameters
+      command: getent passwd appuser
+      register: appuser_entry
+      changed_when: false
+
+    - name: Validate appuser details
+      assert:
+        that:
+          - "'2050:2050' in appuser_entry.stdout"
+          - "'/usr/sbin/nologin' in appuser_entry.stdout"
+        fail_msg: "appuser user parameters do not match requirement 2050:2050"
+
+    - name: ASSERT 2 - Verify baseline package installation state
+      command: dpkg-query -W -f='${Status}' nginx git curl tree
+      register: dpkg_check
+      changed_when: false
+
+    - name: Validate dpkg status
+      assert:
+        that:
+          - dpkg_check.stdout.rsplit('install ok installed') | length >= 4
+        fail_msg: "One or more required packages are missing"
+
+    - name: ASSERT 3 - Check /etc/appsite/app.conf attributes
+      stat:
+        path: /etc/appsite/app.conf
+      register: app_conf_stat
+      changed_when: false
+
+    - name: Validate /etc/appsite/app.conf permissions
+      assert:
+        that:
+          - app_conf_stat.stat.exists
+          - app_conf_stat.stat.pw_name == 'appuser'
+          - app_conf_stat.stat.gr_name == 'appgroup'
+          - app_conf_stat.stat.mode == '0640'
+        fail_msg: "/etc/appsite/app.conf stat assertion failed"
+
+    - name: ASSERT 4 - Verify nginx service active status
+      systemd:
+        name: nginx
+      register: nginx_status
+      changed_when: false
+
+    - name: Validate nginx runtime status
+      assert:
+        that:
+          - nginx_status.status.ActiveState == 'active'
+        fail_msg: "Nginx service is not active"
+
+    - name: ASSERT 5 - Verify HTTP local responsiveness
+      uri:
+        url: http://localhost
+        status_code: 200
+      register: http_check
+      changed_when: false
+
+    - name: Validate HTTP response
+      assert:
+        that:
+          - http_check.status == 200
+        fail_msg: "HTTP check on localhost did not return 200"

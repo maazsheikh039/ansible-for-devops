@@ -1,0 +1,13 @@
+---
+- name: Demonstrate Non-Idempotent Playbook Anti-Patterns
+  hosts: local
+  gather_facts: no
+  tasks:
+    - name: ANTI-PATTERN 1 - Unbounded file append with timestamp
+      shell: "echo 'Log entry created at: $(date +%s)' >> /tmp/audit_log.txt"
+
+    - name: ANTI-PATTERN 2 - Create directory with runtime epoch timestamp
+      shell: "mkdir -p /tmp/deploy_$(date +%s)"
+
+    - name: ANTI-PATTERN 3 - Write key-value without uniqueness check
+      shell: "echo 'MAX_CONNECTIONS=500' >> /tmp/app_config.env"

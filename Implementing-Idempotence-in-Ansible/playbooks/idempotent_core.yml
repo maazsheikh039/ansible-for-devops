@@ -1,0 +1,28 @@
+---
+- name: Declarative Idempotent Core Configuration
+  hosts: local
+  gather_facts: no
+  tasks:
+    - name: DECLARATIVE 1 - Managed audit log header line
+      lineinfile:
+        path: /tmp/audit_log.txt
+        line: "Log system initialized successfully."
+        create: yes
+        state: present
+        owner: "{{ ansible_user_id }}"
+        mode: '0644'
+
+    - name: DECLARATIVE 2 - Static target directory creation
+      file:
+        path: /tmp/deploy_static_dir
+        state: directory
+        mode: '0755'
+
+    - name: DECLARATIVE 3 - Unique key-value line management
+      lineinfile:
+        path: /tmp/app_config.env
+        regexp: '^MAX_CONNECTIONS='
+        line: 'MAX_CONNECTIONS=500'
+        create: yes
+        state: present
+        mode: '0644'
