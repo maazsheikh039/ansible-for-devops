@@ -1,0 +1,20 @@
+---
+- name: Register AWS EC2 Key Pair
+  hosts: localhost
+  gather_facts: no
+  vars:
+    key_name: "ansible-lab-keypair"
+    region: "us-east-1"
+
+  tasks:
+    - name: Upload local public key to EC2
+      amazon.aws.ec2_key:
+        name: "{{ key_name }}"
+        key_material: "{{ lookup('file', '~/.ssh/aws-lab-key.pub') }}"
+        region: "{{ region }}"
+        state: present
+      register: keypair_result
+
+    - name: Confirm keypair deployment status
+      debug:
+        msg: "AWS Key Pair '{{ key_name }}' registered successfully."

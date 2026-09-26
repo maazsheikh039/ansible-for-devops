@@ -1,0 +1,12 @@
+---
+- name: Test AWS Authentication and Connection
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Query AWS caller identity
+      amazon.aws.aws_caller_info:
+      register: caller_info
+
+    - name: Display authenticated AWS Account ID
+      debug:
+        msg: "Connected to AWS Account ID: {{ caller_info.account }}"

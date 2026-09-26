@@ -1,0 +1,49 @@
+---
+- name: Deploy AWS Security Group Rules
+  hosts: localhost
+  gather_facts: no
+  vars:
+    region: "us-east-1"
+    security_group_name: "ansible-lab-sg"
+
+  tasks:
+    - name: Query Default VPC details
+      amazon.aws.ec2_vpc_info:
+        region: "{{ region }}"
+        filters:
+          "is-default": "true"
+      register: vpc_info
+
+    - name: Create security group with SSH, HTTP, and HTTPS rules
+      amazon.aws.ec2_security_group:
+        name: "{{ security_group_name }}"
+        description: "Inbound SSH, HTTP, HTTPS access for Ansible lab"
+        vpc_id: "{{ vpc_info.vpcs[0].vpc_id }}"
+        region: "{{ region }}"
+        rules:
+          - proto: tcp
+            ports: [22]
+            cidr_ip: 0.0.0.0/0
+            rule_desc: "SSH access"
+          - proto: tcp
+            ports: [80]
+            cidr_ip: 0.0.0.0/0
+            rule_desc: "HTTP access"
+          - proto: tcp
+            ports: [443]
+            cidr_ip: 0.0.0.0/0
+            rule_desc: "HTTPS access"
+        rules_egress:
+          - proto: all
+            cidr_ip: 0.0.0.0/0
+            rule_desc: "Allow all outbound traffic"
+        tags:
+          Name: "{{ security_group_name }}"
+          Environment: "Lab"
+          Project: "Ansible-AWS-Lab"
+        state: present
+      register: sg_result
+
+    - name: Display Security Group ID
+      debug:
+        msg: "Security Group Created: {{ sg_result.group_id }}"
