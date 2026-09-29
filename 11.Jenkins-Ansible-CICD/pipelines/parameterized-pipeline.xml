@@ -1,0 +1,69 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job">
+  <actions/>
+  <description>Parameterized CI/CD Pipeline with Ansible</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>ENVIRONMENT</name>
+          <defaultValue>development</defaultValue>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>APP_VERSION</name>
+          <defaultValue>1.0.0</defaultValue>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>SKIP_TESTS</name>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps">
+    <script>
+pipeline {
+    agent any
+    
+    parameters {
+        string(name: 'ENVIRONMENT', defaultValue: 'development', description: 'Target environment')
+        string(name: 'APP_VERSION', defaultValue: '1.0.0', description: 'Application version')
+        booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip tests')
+    }
+    
+    environment {
+        ANSIBLE_HOST_KEY_CHECKING = 'False'
+        PROJECT_DIR = '/var/lib/jenkins/deployment-project'
+    }
+    
+    stages {
+        stage('Deploy') {
+            steps {
+                sh '''
+                    cd ${PROJECT_DIR}
+                    ansible-playbook -i inventory/hosts playbooks/deploy-webapp.yml -v \
+                        -e "environment=${params.ENVIRONMENT}" \
+                        -e "app_version=${params.APP_VERSION}" \
+                        -e "build_number=${BUILD_NUMBER}"
+                '''
+            }
+        }
+        
+        stage('Test Deployment') {
+            when {
+                not { params.SKIP_TESTS }
+            }
+            steps {
+                sh '''
+                    sleep 3
+                    curl -s http://localhost | grep -q "Application Deployed Successfully"
+                '''
+            }
+        }
+    }
+}
+    </script>
+    <sandbox>true</sandbox>
+  </definition>
+</flow-definition>
