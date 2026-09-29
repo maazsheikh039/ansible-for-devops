@@ -1,0 +1,42 @@
+---
+- name: Deployment Summary and Error Reporting
+  hosts: localhost
+  gather_facts: false
+  vars:
+    log_dir: "/tmp/deployment-logs"
+    run_log: "/tmp/deployment-logs/run.log"
+
+  tasks:
+    - name: Find all log files in deployment log directory
+      ansible.builtin.find:
+        paths: "{{ log_dir }}"
+        file_type: file
+      register: found_log_files
+
+    - name: Read main run.log file
+      ansible.builtin.slurp:
+        src: "{{ run_log }}"
+      register: run_log_slurp
+
+    - name: Check for any FAILED keyword across all log files
+      ansible.builtin.shell: "grep -l 'FAILED' {{ log_dir }}/* || true"
+      register: failed_files_check
+      changed_when: false
+
+    - name: Build Summary Dictionary Fact
+      ansible.builtin.set_fact:
+        deployment_summary:
+          total_log_files: "{{ found_log_files.matched }}"
+          run_log_lines: "{{ (run_log_slurp.content | b64decode).splitlines() }}"
+          status: "{{ 'FAILED' if (failed_files_check.stdout | length > 0) else 'PASSED' }}"
+          failed_file_list: "{{ failed_files_check.stdout.splitlines() }}"
+
+    - name: Halt Execution if Failure Detected in Logs
+      ansible.builtin.fail:
+        msg: "DEPLOYMENT FAILED: Failure marker detected in log file(s): {{ deployment_summary.failed_file_list | join(', ') }}"
+      when: deployment_summary.status == 'FAILED'
+
+    - name: Display Deployment Summary Report
+      ansible.builtin.debug:
+        var: deployment_summary
+      when: deployment_summary.status == 'PASSED'

@@ -1,0 +1,31 @@
+---
+- name: Custom Failure Conditions and State Override
+  hosts: localhost
+  gather_facts: false
+  vars:
+    disk_threshold_pct: 80
+    
+  tasks:
+    - name: Task 1 - Parse Disk Usage and Fail on Threshold
+      ansible.builtin.shell: df -h / | awk 'NR==2 {print $5}' | tr -d '%'
+      register: disk_usage
+      changed_when: false
+      failed_when: (disk_usage.stdout | int) > (disk_threshold_pct | int)
+
+    - name: Task 2 - Execute File Creation but Override Change State
+      ansible.builtin.shell: touch /tmp/ansible_test_state_override.tmp
+      register: file_touch
+      changed_when: false
+
+    - name: Task 3 - Multi-condition Check combining OR conditions
+      ansible.builtin.shell: |
+        echo "ERR_SERVICE_DOWN"
+        exit 0
+      register: multi_check_output
+      changed_when: false
+      failed_when:
+        - "('ERR_CRITICAL' in multi_check_output.stdout) or ('ERR_SERVICE_DOWN' in multi_check_output.stdout)"
+
+    - name: Custom Failure Check Execution Summary
+      ansible.builtin.debug:
+        msg: "Custom failure condition tests evaluated within expected thresholds."

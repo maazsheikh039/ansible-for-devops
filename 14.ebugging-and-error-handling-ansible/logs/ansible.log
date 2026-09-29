@@ -1,0 +1,64 @@
+2026-09-29 02:32:45,474 p=6458 u=ubuntu n=ansible INFO| localhost | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+2026-09-29 02:34:55,551 p=6869 u=ubuntu n=ansible ERROR| [ERROR]: conflicting action statements: ansible.builtin.debug, verbosity
+Origin: /home/ubuntu/ansible-debug-lab/playbooks/debug-and-fail.yml:37:7
+
+35       when: enable_feature | bool
+36
+37     - name: Debug Style 4 - Verbosity Restricted Debug Output
+         ^ column 7
+
+
+2026-09-29 02:35:04,988 p=6940 u=ubuntu n=ansible INFO| Using /home/ubuntu/ansible-debug-lab/ansible.cfg as config file
+2026-09-29 02:35:05,321 p=6940 u=ubuntu n=ansible ERROR| [ERROR]: conflicting action statements: ansible.builtin.debug, verbosity
+Origin: /home/ubuntu/ansible-debug-lab/playbooks/debug-and-fail.yml:37:7
+
+35       when: enable_feature | bool
+36
+37     - name: Debug Style 4 - Verbosity Restricted Debug Output
+         ^ column 7
+
+
+2026-09-29 02:35:17,279 p=7012 u=ubuntu n=ansible ERROR| [ERROR]: conflicting action statements: ansible.builtin.debug, verbosity
+Origin: /home/ubuntu/ansible-debug-lab/playbooks/debug-and-fail.yml:37:7
+
+35       when: enable_feature | bool
+36
+37     - name: Debug Style 4 - Verbosity Restricted Debug Output
+         ^ column 7
+
+
+2026-09-29 02:35:51,304 p=7178 u=ubuntu n=ansible ERROR| [ERROR]: The 'community.general.yaml' callback plugin has been removed. The plugin has been superseded by the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature was removed from collection 'community.general' version 12.0.0.
+
+2026-09-29 02:36:19,168 p=7341 u=ubuntu n=ansible INFO| {
+    "_meta": {
+        "hostvars": {
+            "localhost": {
+                "ansible_connection": "local",
+                "ansible_python_interpreter": "/usr/bin/python3"
+            }
+        },
+        "profile": "inventory_legacy"
+    },
+    "all": {
+        "children": [
+            "ungrouped",
+            "local"
+        ]
+    },
+    "local": {
+        "hosts": [
+            "localhost"
+        ]
+    }
+}
+2026-09-29 02:36:45,910 p=7492 u=ubuntu n=ansible ERROR| [ERROR]: The 'community.general.yaml' callback plugin has been removed. The plugin has been superseded by the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature was removed from collection 'community.general' version 12.0.0.
+
+2026-09-29 02:37:15,069 p=7709 u=ubuntu n=ansible ERROR| [ERROR]: The 'community.general.yaml' callback plugin has been removed. The plugin has been superseded by the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature was removed from collection 'community.general' version 12.0.0.
+
+2026-09-29 02:37:36,502 p=7799 u=ubuntu n=ansible ERROR| [ERROR]: The 'community.general.yaml' callback plugin has been removed. The plugin has been superseded by the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature was removed from collection 'community.general' version 12.0.0.
+
+2026-09-29 02:37:47,192 p=7870 u=ubuntu n=ansible ERROR| [ERROR]: The 'community.general.yaml' callback plugin has been removed. The plugin has been superseded by the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature was removed from collection 'community.general' version 12.0.0.
+

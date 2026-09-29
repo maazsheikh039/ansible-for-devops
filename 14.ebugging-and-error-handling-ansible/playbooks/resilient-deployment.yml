@@ -1,0 +1,148 @@
+---
+- name: Production Resilient Multi-Stage Deployment
+  hosts: localhost
+  gather_facts: false
+  vars:
+    log_dir: "/tmp/deployment-logs"
+    run_log: "/tmp/deployment-logs/run.log"
+    counter_file: "/tmp/deployment_counter.txt"
+    force_stage_failure: false
+
+  tasks:
+    - name: Ensure log directory exists
+      ansible.builtin.file:
+        path: "{{ log_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Reset counter file for retry task simulation
+      ansible.builtin.shell: echo "0" > {{ counter_file }}
+      changed_when: false
+
+    # --- STAGE 1: Precondition Validation ---
+    - name: Stage 1 - Precondition Validation Block
+      block:
+        - name: Validate system parameters
+          ansible.builtin.debug:
+            msg: "Validating stage 1 deployment prerequisites..."
+
+        - name: Simulate intentional failure if flag is set
+          ansible.builtin.fail:
+            msg: "STAGE 1 FAILED: Forced failure triggered by force_stage_failure flag."
+          when: force_stage_failure | bool
+
+      rescue:
+        - name: Log stage 1 failure record
+          ansible.builtin.copy:
+            content: |
+              STAGE: Stage 1 - Precondition Validation
+              TIMESTAMP: {{ ansible_date_time.iso8601 | default(now().isoformat()) }}
+              ERROR_MSG: {{ ansible_failed_result.msg | default('Unknown Stage 1 Error') }}
+            dest: "{{ log_dir }}/stage1_failure.log"
+            mode: '0644'
+
+      always:
+        - name: Append stage 1 status to run.log
+          ansible.builtin.lineinfile:
+            path: "{{ run_log }}"
+            line: "STAGE 1: Precondition Validation - Completed with status: {{ 'FAILED' if ansible_failed_task is defined else 'SUCCESS' }}"
+            create: true
+            mode: '0644'
+
+    # --- STAGE 2: Dependency Checks with Retry Logic ---
+    - name: Stage 2 - Dependency Checks Block
+      block:
+        - name: Retry Task - Increment Counter and Succeed on 3rd attempt
+          ansible.builtin.shell: |
+            COUNT=$(cat {{ counter_file }})
+            COUNT=$((COUNT + 1))
+            echo $COUNT > {{ counter_file }}
+            if [ $COUNT -lt 3 ]; then
+              echo "Attempt $COUNT: Not ready yet"
+              exit 1
+            else
+              echo "Attempt $COUNT: Success"
+              exit 0
+            fi
+          register: retry_task
+          retries: 5
+          delay: 1
+          until: retry_task.rc == 0
+
+      rescue:
+        - name: Log stage 2 failure record
+          ansible.builtin.copy:
+            content: |
+              STAGE: Stage 2 - Dependency Checks
+              TIMESTAMP: {{ ansible_date_time.iso8601 | default(now().isoformat()) }}
+              ERROR_MSG: {{ ansible_failed_result.msg | default('Unknown Stage 2 Error') }}
+            dest: "{{ log_dir }}/stage2_failure.log"
+            mode: '0644'
+
+      always:
+        - name: Append stage 2 status to run.log
+          ansible.builtin.lineinfile:
+            path: "{{ run_log }}"
+            line: "STAGE 2: Dependency Checks - Completed with status: {{ 'FAILED' if ansible_failed_task is defined else 'SUCCESS' }}"
+            create: true
+            mode: '0644'
+
+    # --- STAGE 3: Application File Deployment ---
+    - name: Stage 3 - Application File Deployment Block
+      block:
+        - name: Deploy application artifacts
+          ansible.builtin.debug:
+            msg: "Deploying application artifacts to destination directory..."
+
+      rescue:
+        - name: Log stage 3 failure record
+          ansible.builtin.copy:
+            content: |
+              STAGE: Stage 3 - Application Deployment
+              TIMESTAMP: {{ ansible_date_time.iso8601 | default(now().isoformat()) }}
+              ERROR_MSG: {{ ansible_failed_result.msg | default('Unknown Stage 3 Error') }}
+            dest: "{{ log_dir }}/stage3_failure.log"
+            mode: '0644'
+
+      always:
+        - name: Append stage 3 status to run.log
+          ansible.builtin.lineinfile:
+            path: "{{ run_log }}"
+            line: "STAGE 3: Application Deployment - Completed with status: {{ 'FAILED' if ansible_failed_task is defined else 'SUCCESS' }}"
+            create: true
+            mode: '0644'
+
+    # --- STAGE 4: Health Check ---
+    - name: Stage 4 - Health Check Block
+      block:
+        - name: Verify application endpoint health
+          ansible.builtin.debug:
+            msg: "Executing final service health checks..."
+
+      rescue:
+        - name: Log stage 4 failure record
+          ansible.builtin.copy:
+            content: |
+              STAGE: Stage 4 - Health Check
+              TIMESTAMP: {{ ansible_date_time.iso8601 | default(now().isoformat()) }}
+              ERROR_MSG: {{ ansible_failed_result.msg | default('Unknown Stage 4 Error') }}
+            dest: "{{ log_dir }}/stage4_failure.log"
+            mode: '0644'
+
+      always:
+        - name: Append stage 4 status to run.log
+          ansible.builtin.lineinfile:
+            path: "{{ run_log }}"
+            line: "STAGE 4: Health Check - Completed with status: {{ 'FAILED' if ansible_failed_task is defined else 'SUCCESS' }}"
+            create: true
+            mode: '0644'
+
+    # --- FINAL TASK: Display run.log contents ---
+    - name: Read and Display Run Log Contents
+      ansible.builtin.slurp:
+        src: "{{ run_log }}"
+      register: run_log_encoded
+
+    - name: Display Structured Execution Log Output
+      ansible.builtin.debug:
+        msg: "{{ (run_log_encoded.content | b64decode).splitlines() }}"

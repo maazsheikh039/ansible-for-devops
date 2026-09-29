@@ -1,0 +1,60 @@
+---
+- name: Debug Module Mastery and Controlled Failure Design
+  hosts: localhost
+  gather_facts: false
+  vars:
+    app_env: "production"
+    max_memory_mb: 4096
+    enable_feature: true
+    allowed_roles:
+      - admin
+      - devops
+      - auditor
+    server_config:
+      port: 8080
+      timeout: 30
+      
+  tasks:
+    - name: Register command output to variable
+      ansible.builtin.command: uname -s
+      register: kernel_name
+      changed_when: false
+
+    # --- Debug Module Tasks (4 Distinct Styles) ---
+    - name: Debug Style 1 - Raw Variable Output
+      ansible.builtin.debug:
+        var: server_config
+
+    - name: Debug Style 2 - Formatted Message Output
+      ansible.builtin.debug:
+        msg: "Target Environment is '{{ app_env }}' running on Kernel: {{ kernel_name.stdout }}"
+
+    - name: Debug Style 3 - Conditional Debug Output
+      ansible.builtin.debug:
+        msg: "Feature flag is explicitly ENABLED!"
+      when: enable_feature | bool
+
+    - name: Debug Style 4 - Verbosity Restricted Debug Output
+      ansible.builtin.debug:
+        msg: "Verbose Debugging Level 1: Internal memory threshold is {{ max_memory_mb }} MB"
+      verbosity: 1
+
+    # --- Precondition Validation Checks using Fail Module ---
+    - name: Precondition Check 1 - Numeric Threshold
+      ansible.builtin.fail:
+        msg: "FAILED: Memory threshold ({{ max_memory_mb }} MB) is below required minimum (2048 MB)."
+      when: max_memory_mb < 2048
+
+    - name: Precondition Check 2 - List Membership Check
+      ansible.builtin.fail:
+        msg: "FAILED: Role 'devops' is not present in allowed_roles list: {{ allowed_roles }}"
+      when: "'devops' not in allowed_roles"
+
+    - name: Precondition Check 3 - Boolean Flag Check
+      ansible.builtin.fail:
+        msg: "FAILED: Feature flag 'enable_feature' must be set to true."
+      when: not (enable_feature | bool)
+
+    - name: Success Summary Report
+      ansible.builtin.debug:
+        msg: "ALL PRECONDITIONS SATISFIED: System environment validation completed successfully."
