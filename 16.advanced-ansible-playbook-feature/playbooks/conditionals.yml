@@ -1,0 +1,59 @@
+---
+- name: Task 3 - Fact-Driven Conditional Deployment
+  hosts: local
+  become: yes
+  gather_facts: yes
+  vars:
+    debian_packages:
+      - curl
+      - htop
+      - net-tools
+
+    app_deployments:
+      - name: 'service_alpha'
+        environment: 'production'
+        min_memory_mb: 1024
+      - name: 'service_beta'
+        environment: 'development'
+        min_memory_mb: 2048
+      - name: 'service_gamma'
+        environment: 'production'
+        min_memory_mb: 16384
+
+  tasks:
+    # 1. Debug Host Facts
+    - name: Display host facts
+      ansible.builtin.debug:
+        msg:
+          - "OS Family: {{ ansible_facts['os_family'] }}"
+          - "Distribution: {{ ansible_facts['distribution'] }}"
+          - "Total Memory (MB): {{ ansible_facts['memtotal_mb'] }}"
+          - "CPU Cores: {{ ansible_facts['processor_count'] }}"
+
+    # 2. Conditional Package Installation (OS Family)
+    - name: Install required packages on Debian family OS
+      ansible.builtin.apt:
+        name: "{{ debian_packages }}"
+        state: present
+        update_cache: yes
+      when: ansible_facts['os_family'] == 'Debian'
+
+    # 3. Memory Profile File Generation using Jinja2 logic
+    - name: Write resource profile file based on total memory
+      ansible.builtin.copy:
+        content: |
+          Host Memory Profile Report
+          ---------------------------
+          Total Memory: {{ ansible_facts['memtotal_mb'] }} MB
+          Tier Classification: {% if ansible_facts['memtotal_mb'] < 2048 %}Low Memory (<2GB){% elif ansible_facts['memtotal_mb'] <= 8191 %}Medium Memory (2GB-8GB){% else %}High Memory (>=8GB){% endif %}
+        dest: /tmp/resource-profile.txt
+        mode: '0644'
+
+    # 4. Mixed Loop and Conditional Task
+    - name: Deploy marker files for qualified applications
+      ansible.builtin.copy:
+        content: "Deployed {{ item.name }} in {{ item.environment }} mode."
+        dest: "/tmp/marker_{{ item.name }}.txt"
+        mode: '0644'
+      loop: "{{ app_deployments }}"
+      when: ansible_facts['memtotal_mb'] >= item.min_memory_mb

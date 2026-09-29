@@ -1,0 +1,66 @@
+---
+- name: Task 2 - Loop-Driven Resource Provisioning
+  hosts: local
+  become: yes
+  vars:
+    # 1. List of users
+    app_users:
+      - { name: 'appuser1', shell: '/bin/bash' }
+      - { name: 'appuser2', shell: '/bin/bash' }
+      - { name: 'appuser3', shell: '/bin/sh' }
+      - { name: 'appuser4', shell: '/bin/false' }
+
+    # 2. List of directory paths
+    app_directories:
+      - '/opt/app_data'
+      - '/opt/app_logs'
+      - '/var/app_backups'
+      - '/var/app_cache'
+
+    # 3. Dictionary of services
+    app_services:
+      web:
+        port: 8080
+        config_dir: '/opt/app_data/web'
+      api:
+        port: 5000
+        config_dir: '/opt/app_data/api'
+      db_proxy:
+        port: 6432
+        config_dir: '/opt/app_data/db_proxy'
+
+  tasks:
+    # Task 2.1: Create users using with_items (Legacy Syntax)
+    - name: Ensure system users exist
+      ansible.builtin.user:
+        name: "{{ item.name }}"
+        shell: "{{ item.shell }}"
+        state: present
+      with_items: "{{ app_users }}"
+
+    # Task 2.2: Create directories using loop (Modern Syntax)
+    - name: Ensure application directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ app_directories }}"
+
+    # Task 2.3: Ensure service config directories exist
+    - name: Ensure service config directories exist
+      ansible.builtin.file:
+        path: "{{ item.value.config_dir }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ app_services | dict2items }}"
+
+    # Task 2.4: Write configuration files using dict2items
+    - name: Write service configuration files
+      ansible.builtin.copy:
+        content: |
+          # Configuration for {{ item.key }}
+          SERVICE_NAME={{ item.key }}
+          PORT={{ item.value.port }}
+        dest: "{{ item.value.config_dir }}/config.txt"
+        mode: '0644'
+      loop: "{{ app_services | dict2items }}"
