@@ -1,0 +1,19 @@
+---
+- name: Cleanup Kubernetes Resources
+  hosts: local
+  gather_facts: no
+  vars:
+    namespace_name: "ansible-demo"
+  
+  tasks:
+    - name: Delete namespace and all associated resources
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Namespace
+        name: "{{ namespace_name }}"
+      register: cleanup_result
+    
+    - name: Display cleanup status
+      debug:
+        msg: "Namespace {{ namespace_name }} deleted successfully"

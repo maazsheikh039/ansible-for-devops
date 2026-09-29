@@ -1,0 +1,21 @@
+---
+- name: Scale Down Kubernetes Deployment
+  hosts: local
+  gather_facts: no
+  vars:
+    namespace_name: "ansible-demo"
+    app_name: "nginx-app"
+    new_replica_count: 2
+  
+  tasks:
+    - name: Scale down deployment
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ namespace_name }}"
+          spec:
+            replicas: "{{ new_replica_count }}"

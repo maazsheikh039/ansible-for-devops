@@ -1,0 +1,52 @@
+---
+- name: Complete Application Lifecycle Management
+  hosts: local
+  gather_facts: no
+  vars:
+    namespace_name: "ansible-demo"
+    app_name: "nginx-app"
+    service_name: "nginx-service"
+    app_image: "nginx:1.21"
+    replica_count: 3
+    action: "deploy"  # Options: deploy, scale, update, delete
+    new_replica_count: 4
+    new_image: "nginx:1.22"
+  
+  tasks:
+    - name: Create namespace if missing
+      kubernetes.core.k8s:
+        name: "{{ namespace_name }}"
+        api_version: v1
+        kind: Namespace
+        state: present
+      when: action in ['deploy', 'scale', 'update']
+    
+    - name: Scale application
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ namespace_name }}"
+          spec:
+            replicas: "{{ new_replica_count }}"
+      when: action == 'scale'
+    
+    - name: Update application image
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ namespace_name }}"
+          spec:
+            template:
+              spec:
+                containers:
+                - name: "{{ app_name }}"
+                  image: "{{ new_image }}"
+      when: action == 'update'

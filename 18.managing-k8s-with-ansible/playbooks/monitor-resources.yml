@@ -1,0 +1,31 @@
+---
+- name: Monitor Kubernetes Resources
+  hosts: local
+  gather_facts: no
+  vars:
+    namespace_name: "ansible-demo"
+  
+  tasks:
+    - name: Get all deployments in namespace
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        namespace: "{{ namespace_name }}"
+      register: deployments
+    
+    - name: Display deployment summary
+      debug:
+        msg: "Deployment: {{ item.metadata.name }} | Replicas: {{ item.spec.replicas }} | Ready: {{ item.status.readyReplicas | default(0) }}"
+      loop: "{{ deployments.resources }}"
+    
+    - name: Get all pods in namespace
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ namespace_name }}"
+      register: pods
+    
+    - name: Display pod state
+      debug:
+        msg: "Pod: {{ item.metadata.name }} | Status: {{ item.status.phase }}"
+      loop: "{{ pods.resources }}"
