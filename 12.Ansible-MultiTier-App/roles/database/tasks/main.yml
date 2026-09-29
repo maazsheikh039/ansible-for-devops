@@ -1,0 +1,32 @@
+---
+- name: Ensure MySQL service is running
+  ansible.builtin.systemd:
+    name: mysql
+    state: started
+    enabled: yes
+
+- name: Create MySQL database
+  ansible.builtin.command:
+    cmd: mysql -e "CREATE DATABASE IF NOT EXISTS {{ db_name }};"
+  changed_when: false
+
+- name: Create MySQL user and grant privileges
+  ansible.builtin.command:
+    cmd: mysql -e "CREATE USER IF NOT EXISTS '{{ db_user }}'@'localhost' IDENTIFIED BY '{{ db_pass }}'; GRANT ALL PRIVILEGES ON {{ db_name }}.* TO '{{ db_user }}'@'localhost'; FLUSH PRIVILEGES;"
+  changed_when: false
+
+- name: Create tasks table schema
+  ansible.builtin.command:
+    cmd: mysql -u {{ db_user }} -p'{{ db_pass }}' {{ db_name }} -e "
+      CREATE TABLE IF NOT EXISTS tasks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+      INSERT INTO tasks (title, description, status) 
+      SELECT 'Seed Task', 'Initial seed task created by Ansible', 'completed' 
+      FROM DUAL WHERE NOT EXISTS (SELECT * FROM tasks WHERE title = 'Seed Task');"
+  changed_when: false

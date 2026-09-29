@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Multi-Tier Todo Application</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; }
+        .form-group { margin-bottom: 15px; }
+        input[type="text"] { width: 100%; padding: 10px; box-sizing: border-box; }
+        button { padding: 10px 15px; background-color: #28a745; color: white; border: none; cursor: pointer; width: 100%; }
+        ul { list-style-type: none; padding: 0; }
+        li { padding: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; }
+        .status { font-weight: bold; color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Task Manager</h1>
+        <div class="form-group">
+            <input type="text" id="taskTitle" placeholder="Enter task title...">
+        </div>
+        <button onclick="addTask()">Add Task</button>
+        <h2>Current Tasks</h2>
+        <ul id="taskList"></ul>
+    </div>
+    <script>
+        async function fetchTasks() {
+            const res = await fetch('/api/tasks');
+            const data = await res.json();
+            const list = document.getElementById('taskList');
+            list.innerHTML = '';
+            data.forEach(task => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${task.title}</span> <span class="status">[${task.status}]</span>`;
+                list.appendChild(li);
+            });
+        }
+        async function addTask() {
+            const titleInput = document.getElementById('taskTitle');
+            if(!titleInput.value) return;
+            await fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: titleInput.value, status: 'pending' })
+            });
+            titleInput.value = '';
+            fetchTasks();
+        }
+        fetchTasks();
+    </script>
+</body>
+</html>

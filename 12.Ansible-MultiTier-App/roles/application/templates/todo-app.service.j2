@@ -1,0 +1,13 @@
+[Unit]
+Description=Gunicorn instance to serve Todo Flask API
+After=network.target mysql.service
+
+[Service]
+User={{ app_user }}
+Group={{ app_group }}
+WorkingDirectory={{ app_dir }}
+ExecStart={{ app_venv }}/bin/gunicorn --workers 2 --bind 127.0.0.1:{{ app_port }} app:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

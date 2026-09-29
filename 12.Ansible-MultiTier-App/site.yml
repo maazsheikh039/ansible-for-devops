@@ -1,0 +1,8 @@
+---
+- name: Deploy Multi-Tier Application Stack
+  hosts: all
+  become: yes
+  roles:
+    - database
+    - application
+    - webserver

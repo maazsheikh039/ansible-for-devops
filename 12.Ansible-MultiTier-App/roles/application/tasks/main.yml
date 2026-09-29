@@ -1,0 +1,58 @@
+---
+- name: Create system group for application
+  ansible.builtin.group:
+    name: "{{ app_group }}"
+    state: present
+
+- name: Create system user for application
+  ansible.builtin.user:
+    name: "{{ app_user }}"
+    group: "{{ app_group }}"
+    system: yes
+    shell: /usr/sbin/nologin
+
+- name: Create application directory
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+
+- name: Setup virtualenv for application
+  ansible.builtin.command:
+    cmd: python3 -m venv {{ app_venv }}
+    creates: "{{ app_venv }}/bin/activate"
+
+- name: Install Python dependencies in application virtualenv
+  ansible.builtin.pip:
+    name:
+      - flask
+      - flask-cors
+      - mysql-connector-python
+      - gunicorn
+    virtualenv: "{{ app_venv }}"
+
+- name: Deploy application source file from template
+  ansible.builtin.template:
+    src: app.py.j2
+    dest: "{{ app_dir }}/app.py"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0644'
+  notify: restart todo-app
+
+- name: Deploy systemd service configuration
+  ansible.builtin.template:
+    src: todo-app.service.j2
+    dest: /etc/systemd/system/todo-app.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart todo-app
+
+- name: Ensure todo-app service is started and enabled
+  ansible.builtin.systemd:
+    name: todo-app
+    state: started
+    enabled: yes

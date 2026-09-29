@@ -1,0 +1,17 @@
+---
+# Database Configuration
+db_name: "todoapp"
+db_user: "todouser"
+db_pass: "TodoSecurePass123!"
+db_host: "localhost"
+
+# Application Configuration
+app_user: "todoapp"
+app_group: "todoapp"
+app_port: 8080
+app_dir: "/opt/todo-app"
+app_venv: "/opt/todo-app/venv"
+
+# Web Server Configuration
+web_port: 80
+web_root: "/var/www/todo-app"
