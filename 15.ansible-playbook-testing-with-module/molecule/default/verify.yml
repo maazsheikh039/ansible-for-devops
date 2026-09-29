@@ -1,0 +1,49 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Check if Apache2 package is installed
+      ansible.builtin.package_facts:
+        manager: apt
+      become: true
+
+    - name: Verify Apache2 is installed
+      ansible.builtin.assert:
+        that:
+          - "'apache2' in ansible_facts.packages"
+        fail_msg: "Apache2 package is not installed"
+        success_msg: "Apache2 package is successfully installed"
+
+    - name: Check Apache2 service status
+      ansible.builtin.systemd:
+        name: apache2
+      register: apache_status
+      become: true
+
+    - name: Verify Apache2 service is running
+      ansible.builtin.assert:
+        that:
+          - apache_status.status.ActiveState == "active"
+        fail_msg: "Apache2 service is not running"
+        success_msg: "Apache2 service is running successfully"
+
+    - name: Verify Apache2 service is enabled
+      ansible.builtin.assert:
+        that:
+          - apache_status.status.UnitFileState == "enabled"
+        fail_msg: "Apache2 service is not enabled"
+        success_msg: "Apache2 service is enabled"
+
+    - name: Test HTTP response from Apache
+      ansible.builtin.uri:
+        url: http://localhost
+        return_content: true
+      register: http_response
+
+    - name: Verify index.html content
+      ansible.builtin.assert:
+        that:
+          - "'Hello from Ansible Molecule Test!' in http_response.content"
+        fail_msg: "HTTP response test failed"
+        success_msg: "HTTP response test passed successfully"
