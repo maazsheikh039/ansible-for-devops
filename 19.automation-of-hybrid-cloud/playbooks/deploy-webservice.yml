@@ -1,0 +1,97 @@
+---
+- name: Deploy Web Service to Hybrid Cloud
+  hosts: all
+  become: yes
+  vars:
+    web_service_image: hybrid-web-service:latest
+    service_configs:
+      onpremises:
+        port: 5000
+        replicas: 1
+        environment:
+          ENVIRONMENT: "on-premises"
+          DATACENTER: "{{ datacenter }}"
+          PORT: "5000"
+          DATABASE_URL: "postgresql://admin:secure123@onprem-database:5432/onprem_db"
+          CACHE_URL: "redis://onprem-cache:6379"
+      cloud:
+        port: 5001
+        replicas: 2
+        environment:
+          ENVIRONMENT: "cloud"
+          DATACENTER: "{{ datacenter }}"
+          PORT: "5000"
+          DATABASE_URL: "mysql://clouduser:cloudpass123@cloud-database:3306/cloud_db"
+          CACHE_URL: "redis://localhost:6379"
+
+  tasks:
+    - name: Ensure web service image is available
+      docker_image:
+        name: "{{ web_service_image }}"
+        source: local
+        state: present
+
+    - name: Deploy web service to on-premises
+      docker_container:
+        name: "webservice-onprem-{{ ansible_date_time.epoch }}"
+        image: "{{ web_service_image }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "{{ service_configs[environment_type].port }}:5000"
+        env: "{{ service_configs[environment_type].environment }}"
+        networks:
+          - name: "{{ docker_network }}"
+        labels:
+          environment: "{{ environment_type }}"
+          service: "web-service"
+          version: "1.0.0"
+      when: environment_type == 'onpremises'
+
+    - name: Deploy web service to cloud
+      docker_container:
+        name: "webservice-cloud-{{ item }}-{{ ansible_date_time.epoch }}"
+        image: "{{ web_service_image }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "{{ service_configs[environment_type].port | int + item - 1 }}:5000"
+        env: "{{ service_configs[environment_type].environment }}"
+        networks:
+          - name: "{{ docker_network }}"
+        labels:
+          environment: "{{ environment_type }}"
+          service: "web-service"
+          version: "1.0.0"
+          replica: "{{ item }}"
+      loop: "{{ range(1, service_configs[environment_type].replicas + 1) | list }}"
+      when: environment_type == 'cloud'
+
+    - name: Wait for web service to be ready
+      wait_for:
+        port: "{{ service_configs[environment_type].port }}"
+        host: localhost
+        delay: 5
+        timeout: 60
+
+    - name: Test web service endpoint
+      uri:
+        url: "http://localhost:{{ service_configs[environment_type].port }}"
+        method: GET
+        return_content: yes
+      register: service_response
+
+    - name: Display service response
+      debug:
+        msg: "Service response: {{ service_response.json }}"
+
+    - name: Test health endpoint
+      uri:
+        url: "http://localhost:{{ service_configs[environment_type].port }}/health"
+        method: GET
+        return_content: yes
+      register: health_response
+
+    - name: Display health status
+      debug:
+        msg: "Health status: {{ health_response.json }}"

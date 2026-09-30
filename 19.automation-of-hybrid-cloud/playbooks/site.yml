@@ -1,0 +1,36 @@
+---
+- name: Hybrid Cloud Automation - Complete Deployment
+  hosts: localhost
+  gather_facts: yes
+  tasks:
+    - name: Display deployment start message
+      debug:
+        msg: "Starting hybrid cloud deployment at {{ ansible_date_time.iso8601 }}"
+
+- import_playbook: onprem-setup.yml
+- import_playbook: cloud-setup.yml
+- import_playbook: deploy-webservice.yml
+
+- name: Post-Deployment Verification
+  hosts: all
+  tasks:
+    - name: Gather container information
+      docker_container_info:
+        name: "{{ item }}"
+      register: container_info
+      loop:
+        - onprem-database
+        - onprem-cache
+        - cloud-database
+        - cloud-monitoring
+        - cloud-loadbalancer
+      ignore_errors: yes
+
+    - name: Display deployment summary
+      debug:
+        msg: |
+          Deployment Summary:
+          - Environment: {{ environment_type }}
+          - Datacenter: {{ datacenter }}
+          - Network: {{ docker_network }}
+          - Services deployed successfully

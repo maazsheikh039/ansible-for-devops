@@ -1,0 +1,68 @@
+---
+- name: Setup On-Premises Environment
+  hosts: onpremises
+  become: yes
+  vars:
+    onprem_services:
+      - name: onprem-database
+        image: postgres:13
+        ports:
+          - "5432:5432"
+        environment:
+          POSTGRES_DB: onprem_db
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: secure123
+      - name: onprem-cache
+        image: redis:6-alpine
+        ports:
+          - "6379:6379"
+
+  tasks:
+    - name: Create on-premises Docker network
+      docker_network:
+        name: "{{ docker_network }}"
+        state: present
+
+    - name: Create on-premises data directory
+      file:
+        path: /opt/onprem-data
+        state: directory
+        mode: '0755'
+
+    - name: Deploy on-premises services
+      docker_container:
+        name: "{{ item.name }}"
+        image: "{{ item.image }}"
+        state: started
+        restart_policy: always
+        ports: "{{ item.ports | default([]) }}"
+        env: "{{ item.environment | default({}) }}"
+        networks:
+          - name: "{{ docker_network }}"
+        volumes:
+          - "/opt/onprem-data:/var/lib/postgresql/data"
+      loop: "{{ onprem_services }}"
+      when: item.name == 'onprem-database'
+
+    - name: Deploy Redis cache
+      docker_container:
+        name: "{{ item.name }}"
+        image: "{{ item.image }}"
+        state: started
+        restart_policy: always
+        ports: "{{ item.ports | default([]) }}"
+        networks:
+          - name: "{{ docker_network }}"
+      loop: "{{ onprem_services }}"
+      when: item.name == 'onprem-cache'
+
+    - name: Wait for database to be ready
+      wait_for:
+        port: 5432
+        host: localhost
+        delay: 10
+        timeout: 60
+
+    - name: Display on-premises environment status
+      debug:
+        msg: "On-premises environment setup completed with {{ onprem_services | length }} services"
