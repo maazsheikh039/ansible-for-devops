@@ -1,0 +1,6 @@
+---
+cloud_provider: gcp
+package_manager: apt
+web_server: nginx
+monitoring_agent: stackdriver
+backup_schedule: "0 4 * * *"

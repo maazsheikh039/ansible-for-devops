@@ -1,0 +1,28 @@
+---
+- name: Multi-Cloud Infrastructure Deployment
+  hosts: localhost
+  gather_facts: false
+  
+  tasks:
+    - name: Deploy AWS Infrastructure
+      ansible.builtin.import_playbook: aws-provision.yml
+      tags: aws
+
+    - name: Deploy Azure Infrastructure
+      ansible.builtin.import_playbook: azure-provision.yml
+      tags: azure
+
+    - name: Deploy GCP Infrastructure
+      ansible.builtin.import_playbook: gcp-provision.yml
+      tags: gcp
+
+    - name: Wait for all instances to be ready
+      ansible.builtin.pause:
+        seconds: 30
+
+    - name: Display deployment summary
+      ansible.builtin.debug:
+        msg:
+          - "Multi-cloud deployment completed successfully!"
+          - "AWS, Azure, and GCP instances have been provisioned."
+          - "Use dynamic inventories to manage these resources."

@@ -1,0 +1,6 @@
+---
+cloud_provider: azure
+package_manager: apt
+web_server: apache2
+monitoring_agent: azure-monitor
+backup_schedule: "0 3 * * *"
